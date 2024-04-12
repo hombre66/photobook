@@ -1,26 +1,24 @@
-from os import fwalk
-from pandas import DataFrame
-from re import  compile as re_compile
-from pendulum import from_format, datetime
-from PIL import Image, ImageDraw, ImageFont
+"""
+create svideo form jpegd filrs 
+"""
+
+from pendulum import from_format
 import piexif
-from fnmatch import filter
-from os import makedirs, rename, path
-from tqdm import tqdm
+from os import fwalk, makedirs, rename, path
 import cv2
 import os
-
+from time import  sleep
 
 FILES = {}
 
-DATA_PATH = '/Users/standa/eclipse-workspace/photobook/whatsup/data'
+DATA_PATH = '/Users/standa/eclipse-workspace/photobook/whatsup/data/'
 IN_PRINT_AUTHOR = False
 IN_PRINT_DATE_FORMAT = 'DD/MM/YYYY'
 CHAT_FILE_NAME = f'{DATA_PATH}/_chat.txt'
 HTML_FILE_NAME = 'filip.html'
 NAME = ''
 
-NEW_DIR = 'slide_show'
+
 
 def get_date(file):
     """
@@ -51,7 +49,7 @@ def prefix_created_date(file):
         date, _ = get_date(file)
 
         makedirs(path.join(DATA_PATH, NEW_DIR), exist_ok=True)
-        if not path.basename(file)[0].isdigit():
+        if not path.basename(file)[0].isdigit() and date:
             rename(file, path.join(DATA_PATH, NEW_DIR, f"{date}_{path.basename(file)}"))
             print(path.join(DATA_PATH, NEW_DIR, path.basename(file)))
     except Exception as exc:
@@ -61,33 +59,60 @@ def prefix_created_date(file):
 
 ENU = 0
  
-# get_files() 
-#
-# for file in tqdm(sorted(FILES.values())):
-#     prefix_created_date(file)
-#     ENU += 1
-#
-# print(ENU)
-#
+get_files() 
+
+for file in sorted(FILES.values()):
+    prefix_created_date(file)
+    ENU += 1
+
+print('readed files', ENU)
 
 
+ENU = 0
 
+DEBUG = False
 
+W = 1920
+H = 1080
 
+DATA_PATH = '/Users/standa/eclipse-workspace/photobook/whatsup/data/'
+NEW_DIR = 'slide_show'
 image_folder = path.join(DATA_PATH, NEW_DIR)
-video_name = 'video.mpg'
+video_name = 'video.mpg4'
+video = cv2.VideoWriter(video_name,  cv2.VideoWriter_fourcc(*'H264'), 0.33, (W, H))
 
-
-
-video = cv2.VideoWriter(video_name, 0, 2, (1920, 1090))
 
 for image in sorted([img for img in os.listdir(image_folder) if img.endswith('jpg')]):
-    _image = cv2.imread(os.path.join(image_folder, image))
-    w,h, _ = _image.shape
-    scale = min(1920/w, 1080/h)
-    resized_up = cv2.resize(_image, None, fx= 1,fy=scale , interpolation= cv2.INTER_CUBIC)
-    video.write(_image)
 
-cv2.destroyAllWindows()
-print(dir(video))
+    _image = cv2.imread(os.path.join(image_folder, image))
+    
+    h, w ,_ = _image.shape
+    scale = min(W/w, H/h)
+
+    
+    resized = cv2.resize(_image, None, fx= scale,fy=scale , interpolation=cv2.INTER_LINEAR)
+    h1, w1, _ = resized.shape
+    y =H-h1
+    x = W-w1
+    top = y // 2
+    bottom = y - top
+    left = x // 2
+    right = x - left
+    
+    padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT)
+    if DEBUG:
+        cv2.imshow('img', padded)
+        sleep(1)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+   
+    if padded.shape != (H, W, 3):
+        ENU += 1
+        print(padded.shape)
+    video.write(padded)
+
+
+
 video.release()
+cv2.destroyAllWindows()
+print('not procesed filrs', ENU)
